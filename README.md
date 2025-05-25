@@ -28,8 +28,8 @@ We used publicly available dataset (SRA accession number **PRJNA674596**)
 containing three technical replicates of the ZymoBIOMICS Microbial
 Community DNA standard (mock community). Then, we processed these reads by 112 bioinformatics pipeline configurations to compare the different results and analyze which factors change the result the most.
 
-List of the pipeline configurations is available [here](https://xpolak37.github.io/16S_benchmarking/analysis/scripts/list.html).
-Final report can be found [here](https://xpolak37.github.io/16S_benchmarking/analysis/scripts/mock_analysis.html).
+List of the pipeline configurations is available [here](https://xpolak37.github.io/16S_benchmark/analysis/scripts/list.html).
+Final report can be found [here](https://xpolak37.github.io/16S_benchmark/analysis/scripts/mock_analysis.html).
 
 **Results**
 
