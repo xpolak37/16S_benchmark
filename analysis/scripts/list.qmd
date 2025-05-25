@@ -1,0 +1,46 @@
+---
+title: "List of bioinformatics pipeline configurations"
+format: 
+  html:  
+    embed-resources: true
+    keep-md: false
+    toc: true
+    toc-expand: 3
+    toc-depth: 6
+    toc-location: left
+    number-sections: true
+    number-depth: 6
+    code-fold: false
+    code-tools: true
+    code-summary: "Open code"
+    grid: 
+      body-width: 1000px
+      sidebar-width: 600px
+      margin-width: 100px
+editor: source
+project:
+  type: default
+  output-dir: output
+fontsize: 12 px
+---
+
+```{r,echo=FALSE,warning=FALSE}
+library(openxlsx)
+```
+
+# Bioinformatics pipeline configurations
+
+```{r,warning=FALSE,echo=FALSE}
+df <- read.table("../../settings_ids.tsv",header = TRUE)
+knitr::kable(df, align="l",digits=3, caption="List of all pipeline configurations:
+The configurations labeled dada_0 and dada_1 refer to the use of the DADA2 tool, where the mergePairs() function was applied with the parameter mismatch=0 or mismatch=1, respectively.") 
+```
+
+# Preprocessing explained
+
+```{r,warning=FALSE,echo=FALSE}
+df <- read.xlsx("../../preprocessing.xlsx")
+knitr::kable(df, align="l",digits=3, caption="Preprocessing configurations (part 1)")
+df <- read.xlsx("../../preprocessing.xlsx",sheet = "preprocessing_2")
+knitr::kable(df, align="l",digits=3, caption="Preprocessing configurations (part 2)")
+```

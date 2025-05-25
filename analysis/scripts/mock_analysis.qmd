@@ -1,0 +1,218 @@
+---
+title: "Comparing bioinformatics pipelines"
+subtitle: "16S short reads"
+format: 
+  html:  
+    embed-resources: true
+    keep-md: false
+    toc: true
+    toc-expand: 3
+    toc-depth: 6
+    toc-location: left
+    number-sections: true
+    number-depth: 6
+    code-fold: false
+    code-tools: true
+    code-summary: "Open code"
+    grid: 
+      body-width: 1000px
+      sidebar-width: 600px
+      margin-width: 100px
+editor: source
+project:
+  type: default
+  output-dir: output
+fontsize: 12 px
+---
+
+# Bioinformatics pipeline configurations
+
+```{r,warning=FALSE}
+df <- read.table("../../settings_ids.tsv",header = TRUE)
+knitr::kable(df, align="l",digits=3, caption="List of all pipeline configurations:
+The configurations labeled dada_0 and dada_1 refer to the use of the DADA2 tool, where the mergePairs() function was applied with the parameter mismatch=0 or mismatch=1, respectively.") 
+```
+
+# Preprocessing explained
+
+```{r}
+df <- read.xlsx("../../preprocessing.xlsx")
+knitr::kable(df, align="l",digits=3, caption="Preprocessing configurations (part 1)")
+df <- read.xlsx("../../preprocessing.xlsx",sheet = "preprocessing_2")
+knitr::kable(df, align="l",digits=3, caption="Preprocessing configurations (part 2)")
+```
+
+
+
+# Import dataset
+
+```{r}
+asv_table <- read.csv("../data/asv_table.csv",sep=";")
+asv_table[is.na(asv_table)] <- 0
+asv_table[,-1] <- apply(asv_table[,-1],2,function(x) x/sum(x))
+
+taxa_table <- read.csv("../data/taxa_table.csv",sep=";")
+colors <- taxa_table$Color
+colors[colors==""] <- NA
+asv_table$Color <- colors
+taxa_table <- taxa_table[,-9]
+
+metadata <- read.csv("../data/metadata.csv",sep=";")
+metadata$SettingID <- factor(metadata$SettingID,
+                             levels=(c("Mock_reference",
+                                      paste0("DA",1:48),
+                                      paste0("VU",1:32),
+                                      paste0("DE",1:32))))
+```
+
+```{r}
+source("custom_functions.R")
+```
+
+# Stacked-barlot
+
+```{r,fig.width=12}
+
+df_p <- melt(asv_table) %>% 
+  `colnames<-`(c("SeqID","color", "sample","value")) %>%
+  dplyr::mutate(SettingID=sapply(strsplit(as.character(sample),"_"),function (x) x[1]))
+
+df_p$SettingID <- gsub("^Mock$","Reference",df_p$SettingID)
+df_p$SettingID <-  factor(df_p$SettingID,
+                             levels= (c("Reference",
+                                      paste0("DA",1:48),
+                                      paste0("VU",1:32),
+                                      paste0("DE",1:32))))
+
+
+df_p %<>% dplyr::group_by(SettingID,SeqID) %>%
+  summarize(
+    value=mean(value),
+    color=unique(color)
+  )
+
+colors <- df_p$color
+names(colors) <- df_p$SeqID
+
+p <- ggplot(df_p, aes(fill=SeqID, y=value, x=SettingID)) + 
+    geom_bar(position="stack", stat="identity",width=0.8) +
+  theme_minimal() + 
+  theme(panel.border = element_rect(color = "black", fill = NA, size = 0),
+        axis.text.x = element_text(size = 8,color="black"),
+        axis.text.y = element_text(size = 10,color="black"),
+        axis.ticks.x = element_line(size=0.3,color="black"),
+        axis.ticks.y = element_line(size=0.3,color="black"),
+        axis.ticks.length = unit(4,"pt"),
+        panel.grid = element_blank()) + 
+  scale_fill_manual(values=colors) + 
+  ylab("Relative abundance") + 
+  xlab("Pipeline") + 
+  theme(legend.position = "none") +
+  scale_x_discrete(guide = guide_axis(angle = 90)) 
+
+p
+```
+
+```{r,eval=FALSE,echo=FALSE}
+pdf("../results/figures/composition.pdf",
+    height =4,width = 12)
+p
+dev.off()
+```
+
+# PCoA
+
+```{r,fig.width=10,fig.height=8}
+# Taxonomic classifier
+p_pcoa_classifier <- pca_plot_custom(asv_table,taxa_table,metadata)
+
+
+p_pcoa_replicate <- pca_plot_custom(asv_table,taxa_table,metadata,variable="Replicate")
+
+
+p_pcoa_prep <- pca_plot_custom(asv_table,taxa_table,metadata,variable="Preprocessing")
+
+
+p_pcoa_tool <- pca_plot_custom(asv_table,taxa_table,metadata,variable="Tool")
+
+
+p_pcoa <- ggarrange(p_pcoa_classifier,p_pcoa_replicate,p_pcoa_tool,p_pcoa_prep, ncol=2,nrow=2)
+
+p_pcoa
+```
+
+```{r,echo=FALSE,eval=FALSE}
+pdf("../results/figures/pcoa_with_legend.pdf",
+    height =8,width = 12)
+p_pcoa
+dev.off()
+```
+
+
+```{r,fig.width=10,fig.height=8,eval=FALSE,echo=FALSE}
+# Taxonomic classifier
+p_pcoa_classifier <- pca_plot_custom(asv_table,taxa_table,metadata,legend = FALSE)
+
+
+p_pcoa_replicate <- pca_plot_custom(asv_table,taxa_table,metadata,variable="Replicate",legend = FALSE)
+
+
+p_pcoa_prep <- pca_plot_custom(asv_table,taxa_table,metadata,variable="Preprocessing",legend = FALSE)
+
+
+p_pcoa_tool <- pca_plot_custom(asv_table,taxa_table,metadata,variable="Tool",legend = FALSE)
+
+
+p_pcoa <- ggarrange(p_pcoa_classifier,
+                    ggplot() + theme_minimal(),
+                    p_pcoa_replicate,
+                    ggplot() + theme_minimal(),
+                    p_pcoa_tool,
+                    ggplot() + theme_minimal(),
+                    p_pcoa_prep,
+                    ggplot() + theme_minimal(),
+                    ncol=4,nrow=2,
+                    widths = c(1,0.4,1,0.4,1,0.4,1,0.4),
+                    labels=c("A","","B","", "C","", "D",""),
+                    font.label = list(size = 30, color = "black"))
+p_pcoa
+```
+
+```{r,eval=FALSE,echo=FALSE}
+pdf("../results/figures/pcoa_no_legend.pdf",
+    height =8,width = 12)
+p_pcoa
+dev.off()
+```
+
+# Bray-Curtis
+
+```{r}
+p_bray <- bray_custom(asv_table,metadata) 
+p_bray 
+```
+
+```{r,eval=FALSE,echo=FALSE}
+pdf("../results/figures/bray_curtis.pdf",
+    height =4,width = 6)
+p_bray
+dev.off()
+```
+
+# Performance metrics
+
+```{r}
+metadata <- precision_recall(asv_table,metadata)
+```
+
+```{r,fig.width=12}
+p_performance <- performance_plot(metadata)
+p_performance
+```
+
+```{r,eval=FALSE,echo=FALSE}
+pdf("../results/figures/performance.pdf",
+    height =4,width = 12)
+p_performance
+dev.off()
+```
